@@ -2,7 +2,7 @@ name: Build and Push to GCP Artifact Registry
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "sri-order-service" ]
 
 env:
   PROJECT_ID: gcp-devsecops-487808
