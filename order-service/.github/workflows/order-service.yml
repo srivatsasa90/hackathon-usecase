@@ -1,0 +1,51 @@
+name: Build and Push to GCP Artifact Registry
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  PROJECT_ID: gcp-devsecops-487808
+  REGION: us-central1
+  REPOSITORY: hackathon-usecase
+  IMAGE_NAME: order-service
+  APPLICATION: order-service-app
+
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Required for requesting the JWT
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # Authenticate to GCP using Workload Identity Federation
+    - name: Google Auth
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        token_format: access_token
+        workload_identity_provider: 'projects/477958193400/locations/global/workloadIdentityPools/github-actions-pool-hack/providers/github-provider-hack'
+        service_account: 'github-actions-runner-hack@gcp-devsecops-487808.iam.gserviceaccount.com'
+
+    # Log in to Artifact Registry
+    - name: Docker Auth
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGION }}-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}
+
+    # Build and Push the image
+    - name: Build and Push Container
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.APPLICATION }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.APPLICATION }}/${{ env.IMAGE_NAME }:latest
